@@ -1,0 +1,73 @@
+may be some one will get help from this. only 3 steps require to make it without save customization.
+
+step1: change HTML code.
+step 2: change js.
+step 3: change controller
+
+note: Prestashop 1.7 --> this is insane but core.js file need to update little bit and your task will be done.
+
+
+
+ STEP 1:
+
+Go to below file and do the follow changes
+themes/classic/templates/catalog/_partials/product-customization.tpl 
+
+remove the form tag <form.......> and </form> because we are doing this with ajax.
+remove the submit button
+add this line <input type="hidden" class="formurl" value="{$product.url}" />
+
+
+STEP 2:
+Go to file themes/core.js and search for below code
+
+e.on("click", '[data-button-action="add-to-cart"]', function(e) {
+
+add the below code just after the above line.
+
+// save customization upon add to cart button
+            if($('.product-customization .formurl').length){
+                var dat = new FormData();
+                var formActionAttribute_url = $(".product-customization .formurl").val();
+                $(".product-customization-item").each(function(){
+                    if($(this).find('input').attr('type') != 'file')
+                        dat.append($(this).find('input').attr('name') , $(this).find('input').val());   
+                    else
+                        dat.append($(this).find('input').attr('name'), $(this).find('input')[0].files[0])
+                });
+                
+                dat.append('submitCustomizedData', true);
+                dat.append("ajaxRequestForCustomize",true);
+
+                $.ajax({
+                    type: "POST",
+                    dataType: 'json',
+                    async: false,
+                    enctype: 'multipart/form-data',
+                    url : formActionAttribute_url,
+                    data : dat,
+                    contentType: false,
+                    cache: false,
+                    processData:false,
+                    success: function(responsedata){
+                        console.log(responsedata);
+                        $(".product-actions #product_customization_id").val(responsedata.idd);
+                    }
+                });
+            }
+
+
+
+
+STEP 3:
+
+Go to file 
+controllers/front/ProductController.php
+find the below code in initcontent() function
+$this->assignAttributesGroups($product_for_template); 
+
+Add below code
+ if(Tools::getValue('ajaxRequestForCustomize') == true){
+       $idd = empty($customization_datas) ? null : $customization_datas[0]['id_customization'];
+       print_r(json_encode(["idd" => $idd]));
+  }
